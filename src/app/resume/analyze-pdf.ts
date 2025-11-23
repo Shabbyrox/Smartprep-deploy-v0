@@ -21,7 +21,7 @@ export async function analyzePdfResume(formData: FormData) {
         const buffer = Buffer.from(arrayBuffer)
 
         // Use pdf2json to extract text
-        const pdfParser = new PDFParser(null, 1) // 1 for text content
+        const pdfParser = new PDFParser(null, true) // true for text content
 
         const resumeText = await new Promise<string>((resolve, reject) => {
             pdfParser.on('pdfParser_dataError', (errData: any) => reject(errData.parserError))
