@@ -1,62 +1,22 @@
 import { createClient } from '@/utils/supabase/server'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Trophy, Star, Activity } from 'lucide-react'
+import { Suspense } from 'react'
+import { StatsSection, ChartsSection, RoleProgressSection, RecentActivitySection } from '@/app/dashboard/DashboardSections'
+import { StatsSkeleton, ChartSkeleton, RoleProgressSkeleton, ActivitySkeleton } from '@/app/dashboard/Skeletons'
 
 export default async function Dashboard() {
     const supabase = await createClient()
 
-    // Fetch data
-    const { data: quizzes } = await supabase.from('quizzes').select('*')
-    const { data: results } = await supabase.from('quiz_results').select('*')
-
+    // 1. Fetch User ONLY (Fast!)
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
         redirect('/login')
     }
 
-    const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-
-    if (!quizzes || !results) {
-        return <div>Loading...</div>
-    }
-
-    // Calculate Stats
-    const totalQuizzesTaken = results.length
-    const uniqueQuizzesTaken = new Set(results.map(r => r.quiz_id)).size
-    const totalAvailableQuizzes = quizzes.length
-
-    const totalScore = results.reduce((acc, r) => acc + r.score, 0)
-    const totalPossibleScore = results.reduce((acc, r) => acc + r.total_questions, 0)
-    const averageAccuracy = totalPossibleScore > 0 ? Math.round((totalScore / totalPossibleScore) * 100) : 0
-
-    // Progress by Role
-    const roles = Array.from(new Set(quizzes.map(q => q.role)))
-    const roleProgress = roles.map(role => {
-        const roleQuizzes = quizzes.filter(q => q.role === role)
-        const roleResults = results.filter(r => roleQuizzes.some(q => q.id === r.quiz_id))
-
-        // Count levels completed (passing score >= 70%)
-        const completedLevels = roleQuizzes.filter(q => {
-            const bestResult = roleResults
-                .filter(r => r.quiz_id === q.id)
-                .reduce((max, r) => (r.score > max.score ? r : max), { score: -1, total_questions: 1 } as any)
-
-            return bestResult.score >= 0 && (bestResult.score / bestResult.total_questions) * 100 >= (q.passing_score || 50)
-        }).length
-
-        return {
-            role,
-            completed: completedLevels,
-            total: roleQuizzes.length,
-            percentage: Math.round((completedLevels / roleQuizzes.length) * 100)
-        }
-    })
+    // 2. Fetch Profile name (Fast - single row)
+    const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single()
 
     return (
         <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -68,85 +28,25 @@ export default async function Dashboard() {
                     <p className="mt-2 text-gray-600">Here's how you're doing on your learning journey.</p>
                 </div>
 
-                {/* Stats Grid */}
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-3 mb-12">
-                    <div className="bg-white overflow-hidden shadow rounded-lg">
-                        <div className="p-5">
-                            <div className="flex items-center">
-                                <div className="flex-shrink-0">
-                                    <Trophy className="h-6 w-6 text-yellow-400" />
-                                </div>
-                                <div className="ml-5 w-0 flex-1">
-                                    <dl>
-                                        <dt className="text-sm font-medium text-gray-500 truncate">Quizzes Completed</dt>
-                                        <dd className="text-lg font-medium text-gray-900">{uniqueQuizzesTaken} / {totalAvailableQuizzes}</dd>
-                                    </dl>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                {/* 3. Stream in the components independently */}
+                
+                <Suspense fallback={<StatsSkeleton />}>
+                    <StatsSection userId={user.id} />
+                </Suspense>
 
-                    <div className="bg-white overflow-hidden shadow rounded-lg">
-                        <div className="p-5">
-                            <div className="flex items-center">
-                                <div className="flex-shrink-0">
-                                    <Activity className="h-6 w-6 text-green-500" />
-                                </div>
-                                <div className="ml-5 w-0 flex-1">
-                                    <dl>
-                                        <dt className="text-sm font-medium text-gray-500 truncate">Average Accuracy</dt>
-                                        <dd className="text-lg font-medium text-gray-900">{averageAccuracy}%</dd>
-                                    </dl>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <Suspense fallback={<ChartSkeleton />}>
+                    <ChartsSection userId={user.id} />
+                </Suspense>
 
-                    <div className="bg-white overflow-hidden shadow rounded-lg">
-                        <div className="p-5">
-                            <div className="flex items-center">
-                                <div className="flex-shrink-0">
-                                    <Star className="h-6 w-6 text-indigo-500" />
-                                </div>
-                                <div className="ml-5 w-0 flex-1">
-                                    <dl>
-                                        <dt className="text-sm font-medium text-gray-500 truncate">Total Attempts</dt>
-                                        <dd className="text-lg font-medium text-gray-900">{totalQuizzesTaken}</dd>
-                                    </dl>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                {/* NEW SECTION HERE */}
+                <Suspense fallback={<ActivitySkeleton />}>
+                    <RecentActivitySection userId={user.id} />
+                </Suspense>
 
-                {/* Role Progress */}
                 <h2 className="text-xl font-bold text-gray-900 mb-4">Role Progress</h2>
-                <div className="bg-white shadow overflow-hidden sm:rounded-md">
-                    <ul className="divide-y divide-gray-200">
-                        {roleProgress.map((prog) => (
-                            <li key={prog.role}>
-                                <div className="px-4 py-4 sm:px-6">
-                                    <div className="flex items-center justify-between">
-                                        <div className="text-sm font-medium text-indigo-600 truncate">{prog.role}</div>
-                                        <div className="ml-2 flex-shrink-0 flex">
-                                            <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                                {prog.completed} / {prog.total} Levels
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className="mt-2">
-                                        <div className="w-full bg-gray-200 rounded-full h-2.5">
-                                            <div
-                                                className="bg-indigo-600 h-2.5 rounded-full"
-                                                style={{ width: `${prog.percentage}%` }}
-                                            ></div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
-                </div>
+                <Suspense fallback={<RoleProgressSkeleton />}>
+                    <RoleProgressSection userId={user.id} />
+                </Suspense>
 
                 <div className="mt-8 flex justify-end">
                     <Link

@@ -1,41 +1,38 @@
 'use server'
 
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { generateContentWithRetry } from '../../utils/gemini'
 
 export async function evaluateAnswer(
     question: string,
     answer: string,
     jobRole: string
 ) {
-    const apiKey = process.env.GEMINI_API_KEY
-    if (!apiKey) return { error: 'API key not configured' }
-
     try {
-        const genAI = new GoogleGenerativeAI(apiKey)
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
-
         const prompt = `
 You are an expert interviewer evaluating a candidate's answer for the role of "${jobRole}".
 
 Question: ${question}
 Candidate's Answer: ${answer}
 
-Provide a brief evaluation. Respond with VALID JSON ONLY:
+Provide a brief evaluation. Respond ONLY with a valid JSON object in this exact format. Do not include any text before or after the JSON. Do not use markdown code blocks. Ensure all strings are properly escaped and no trailing commas.
 {
     "score": number (0-10),
     "feedback": "Brief 1-2 sentence feedback on the answer quality"
 }
 `
 
-        const result = await model.generateContent(prompt)
-        const response = await result.response
-        const text = response.text()
+        const text = await generateContentWithRetry(prompt)
 
         const jsonMatch = text.match(/\{[\s\S]*\}/)
         const jsonStr = jsonMatch ? jsonMatch[0] : text
 
-        const evaluation = JSON.parse(jsonStr)
-        return evaluation
+        try {
+            const evaluation = JSON.parse(jsonStr)
+            return evaluation
+        } catch (e) {
+            console.log('JSON parse failed in evaluate-answer.ts, raw response:', jsonStr)
+            return { error: 'AI returned invalid JSON. Please try again.' }
+        }
 
     } catch (error: any) {
         console.error('Error evaluating answer:', error)

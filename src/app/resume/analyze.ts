@@ -1,22 +1,13 @@
 'use server'
 
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { generateContentWithRetry } from '../../utils/gemini'
+import { createClient } from '@/utils/supabase/server'
 
 export async function analyzeResume(resumeContent: any) {
-    const apiKey = process.env.GEMINI_API_KEY
-
-    if (!apiKey) {
-        return { error: 'API key not configured' }
-    }
-
-    const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
-
     const prompt = `
     Analyze the following resume data and provide constructive feedback with scores.
     
-    IMPORTANT: Respond with a VALID JSON object ONLY. Do not include any markdown formatting, backticks, or explanations outside the JSON.
-    Ensure all strings are properly escaped.
+    IMPORTANT: Respond ONLY with a valid JSON object in this exact format. Do not include any text before or after the JSON. Do not use markdown code blocks. Ensure all strings are properly escaped and no trailing commas.
     
     Structure:
     {
@@ -37,15 +28,32 @@ export async function analyzeResume(resumeContent: any) {
   `
 
     try {
-        const result = await model.generateContent(prompt)
-        const response = await result.response
-        const text = response.text()
+        const text = await generateContentWithRetry(prompt)
 
         // Robust JSON extraction
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         const jsonStr = jsonMatch ? jsonMatch[0] : text;
 
-        return JSON.parse(jsonStr)
+        try {
+            const result = JSON.parse(jsonStr)
+            // Save to database
+            const supabase = await createClient()
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user) {
+                await supabase.from('resume_analyses').insert({
+                    user_id: user.id,
+                    overall_score: result.overallScore,
+                    section_scores: result.sectionScores,
+                    feedback: result.feedback,
+                    source: 'quick_analysis',
+                    created_at: new Date().toISOString()
+                })
+            }
+            return result
+        } catch (e) {
+            console.log('JSON parse failed, raw response:', jsonStr)
+            return { error: 'AI returned invalid JSON. Please try again.' }
+        }
     } catch (error: any) {
         console.error('Error analyzing resume:', error)
         return { error: error.message || 'Failed to analyze resume' }

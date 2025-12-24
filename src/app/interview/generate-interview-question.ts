@@ -1,6 +1,6 @@
 'use server'
 
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { generateContentWithRetry } from '../../utils/gemini'
 
 interface ConversationTurn {
     question: string
@@ -12,13 +12,7 @@ export async function generateInterviewQuestion(
     conversationHistory: ConversationTurn[],
     questionNumber: number
 ) {
-    const apiKey = process.env.GEMINI_API_KEY
-    if (!apiKey) return { error: 'API key not configured' }
-
     try {
-        const genAI = new GoogleGenerativeAI(apiKey)
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
-
         const conversationContext = conversationHistory.length > 0
             ? conversationHistory.map((turn, idx) => `Q${idx + 1}: ${turn.question}\nA${idx + 1}: ${turn.answer}`).join('\n\n')
             : 'No previous questions yet.'
@@ -42,9 +36,7 @@ Generate the next interview question. Follow these guidelines:
 IMPORTANT: Respond with ONLY the question text. No additional formatting or explanation.
 `
 
-        const result = await model.generateContent(prompt)
-        const response = await result.response
-        const question = response.text().trim()
+        const question = await generateContentWithRetry(prompt)
 
         return { question }
 

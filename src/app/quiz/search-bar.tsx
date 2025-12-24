@@ -39,7 +39,7 @@ export default function QuizSearchBar() {
             </div>
             <input
                 type="text"
-                className="block w-full pl-14 pr-4 py-3 border border-gray-200 rounded-xl leading-5 bg-white text-gray-900 placeholder-gray-500 shadow-sm focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent sm:text-sm transition-all duration-200 ease-in-out hover:shadow-md"
+                className="block w-full pl-9 pr-4 py-3 border border-gray-200 rounded-xl leading-5 bg-white text-gray-900 placeholder-gray-500 shadow-sm focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-transparent sm:text-sm transition-all duration-200 ease-in-out hover:shadow-md"
                 placeholder="Search by role (e.g. Backend)..."
                 value={searchTerm}
                 onChange={(e) => {

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Mic, MicOff, Play, Pause, Send, Loader2, CheckCircle } from 'lucide-react'
 import { generateInterviewQuestion } from '@/app/interview/generate-interview-question'
 import { evaluateAnswer } from '@/app/interview/evaluate-answer'
+import { saveInterviewResult } from '@/app/interview/save-result'
 
 interface ConversationTurn {
     question: string
@@ -11,6 +12,7 @@ interface ConversationTurn {
     score?: number
     feedback?: string
 }
+
 
 const JOB_ROLES = [
     'Frontend Developer',
@@ -43,33 +45,47 @@ export default function InterviewCard() {
         if (typeof window !== 'undefined') {
             synthRef.current = window.speechSynthesis
 
+            // Load voices
+            const loadVoices = () => {
+                const voices = synthRef.current?.getVoices() || []
+                if (voices.length > 0) {
+                    // Voices loaded
+                }
+            }
+            loadVoices()
+            if (synthRef.current.onvoiceschanged !== undefined) {
+                synthRef.current.onvoiceschanged = loadVoices
+            }
+
             // Initialize speech recognition
             const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
             if (SpeechRecognition) {
-                recognitionRef.current = new SpeechRecognition()
-                recognitionRef.current.continuous = true
-                recognitionRef.current.interimResults = true
-                recognitionRef.current.lang = 'en-US'
+                try {
+                    recognitionRef.current = new SpeechRecognition()
+                    recognitionRef.current.continuous = true
+                    recognitionRef.current.interimResults = true
+                    recognitionRef.current.lang = 'en-US'
 
-                recognitionRef.current.onresult = (event: any) => {
-                    let interimTranscript = ''
-                    let finalTranscript = ''
+                    recognitionRef.current.onresult = (event: any) => {
+                        let interimTranscript = ''
+                        let finalTranscript = ''
 
-                    for (let i = event.resultIndex; i < event.results.length; i++) {
-                        const transcript = event.results[i][0].transcript
-                        if (event.results[i].isFinal) {
-                            finalTranscript += transcript + ' '
-                        } else {
-                            interimTranscript += transcript
+                        for (let i = event.resultIndex; i < event.results.length; i++) {
+                            const transcript = event.results[i][0].transcript
+                            if (event.results[i].isFinal) {
+                                finalTranscript += transcript + ' '
+                            } else {
+                                interimTranscript += transcript
+                            }
                         }
+
+                        setTranscript((prev) => prev + finalTranscript || interimTranscript)
                     }
 
-                    setTranscript((prev) => prev + finalTranscript || interimTranscript)
-                }
-
-                recognitionRef.current.onerror = (event: any) => {
-                    console.error('Speech recognition error:', event.error)
-                    setIsRecording(false)
+                    // Remove onerror from here - set it only when starting
+                } catch (error) {
+                    console.error('Failed to initialize speech recognition:', error)
+                    // Speech recognition not available or permission denied
                 }
             }
         }
@@ -98,26 +114,53 @@ export default function InterviewCard() {
         setIsLoading(false)
     }
 
+    const getNaturalVoice = () => {
+        if (!synthRef.current) return null
+        const voices = synthRef.current.getVoices()
+        // Prefer natural-sounding voices (Google, Microsoft, or female voices)
+        const preferred = voices.find(v => 
+            v.name.includes('Google') || 
+            v.name.includes('Microsoft') || 
+            v.name.includes('Female') || 
+            v.name.includes('Samantha') || 
+            v.name.includes('Zira')
+        )
+        return preferred || voices.find(v => v.lang.startsWith('en')) || voices[0]
+    }
+
     const speakText = (text: string) => {
         if (synthRef.current) {
             synthRef.current.cancel()
             const utterance = new SpeechSynthesisUtterance(text)
-            utterance.rate = 0.9
-            utterance.pitch = 1
+            utterance.voice = getNaturalVoice()
+            utterance.rate = 0.8 // Slower for more natural sound
+            utterance.pitch = 1.1 // Slightly higher pitch for friendliness
+            utterance.volume = 1
             utterance.onstart = () => setIsSpeaking(true)
             utterance.onend = () => setIsSpeaking(false)
             synthRef.current.speak(utterance)
         }
     }
 
-    const toggleRecording = () => {
+    const toggleRecording = async () => {
         if (isRecording) {
             recognitionRef.current?.stop()
             setIsRecording(false)
         } else {
             setTranscript('')
-            recognitionRef.current?.start()
-            setIsRecording(true)
+            if (recognitionRef.current) {
+                recognitionRef.current.onerror = (event: any) => {
+                    console.error('Speech recognition error:', event.error)
+                    setIsRecording(false)
+                }
+                try {
+                    recognitionRef.current.start()
+                    setIsRecording(true)
+                } catch (error) {
+                    console.error('Failed to start speech recognition:', error)
+                    alert('Speech recognition failed to start. Please check your browser settings for microphone permissions.')
+                }
+            }
         }
     }
 
@@ -179,6 +222,24 @@ export default function InterviewCard() {
         return Math.round(total / conversationHistory.length)
     }
 
+    useEffect(() => {
+        if (interviewComplete && jobRole && conversationHistory.length > 0) {
+            const resultToSave = {
+                jobRole,
+                score: getAverageScore(),
+                conversationHistory,
+            };
+            console.log('Attempting to save interview result...');
+            saveInterviewResult(resultToSave).then(res => {
+                if (res.error) {
+                    console.error('Failed to save interview result:', res.error);
+                } else {
+                    console.log('Interview result saved successfully!');
+                }
+            });
+        }
+    }, [interviewComplete, jobRole, conversationHistory]);
+
     return (
         <div className="bg-white overflow-hidden shadow rounded-lg">
             <div className="p-6">
@@ -204,7 +265,7 @@ export default function InterviewCard() {
                                 <select
                                     value={jobRole}
                                     onChange={(e) => setJobRole(e.target.value)}
-                                    className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                    className="block w-full rounded-md text-gray-700 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
                                 >
                                     <option value="">-- Select a role --</option>
                                     {JOB_ROLES.map((role) => (
@@ -284,7 +345,7 @@ export default function InterviewCard() {
                                 value={transcript}
                                 onChange={(e) => setTranscript(e.target.value)}
                                 rows={5}
-                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:placeholder-gray-400"
                                 placeholder={isRecording ? 'Listening...' : 'Click "Start Recording" to speak or type your answer here...'}
                             />
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Upload, Loader2, FileText, Briefcase, ArrowRight } from 'lucide-react'
 import { analyzePdfResume } from '@/app/resume/analyze-pdf'
 import ReactMarkdown from 'react-markdown'
@@ -9,6 +9,13 @@ import Link from 'next/link'
 export default function ResumeAnalyzerCard() {
     const [analyzing, setAnalyzing] = useState(false)
     const [result, setResult] = useState<any>(null)
+    const resultsRef = useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        if (result && resultsRef.current) {
+            resultsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+    }, [result])
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files || e.target.files.length === 0) return
@@ -78,7 +85,7 @@ export default function ResumeAnalyzerCard() {
                 )}
 
                 {result && (
-                    <div className="mt-6 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div ref={resultsRef} className="mt-6 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="flex items-center justify-between border-b pb-4">
                             <h4 className="text-xl font-bold text-gray-900">Analysis Result</h4>
                             <button

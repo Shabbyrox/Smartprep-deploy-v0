@@ -1,6 +1,7 @@
 'use server'
 
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { generateContentWithRetry } from '../../utils/gemini'
+import { createClient } from '@/utils/supabase/server'
 // @ts-ignore
 import PDFParser from 'pdf2json'
 
@@ -12,9 +13,6 @@ export async function analyzeResumeWithJD(formData: FormData) {
     if (!file) return { error: 'No file uploaded' }
     if (!jobRole) return { error: 'Job Role is required' }
     if (!jobDescription) return { error: 'Job Description is required' }
-
-    const apiKey = process.env.GEMINI_API_KEY
-    if (!apiKey) return { error: 'API key not configured' }
 
     try {
         const arrayBuffer = await file.arrayBuffer()
@@ -30,9 +28,6 @@ export async function analyzeResumeWithJD(formData: FormData) {
             pdfParser.parseBuffer(buffer)
         })
 
-        const genAI = new GoogleGenerativeAI(apiKey)
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
-
         const prompt = `
         You are an expert ATS (Applicant Tracking System) and Hiring Manager.
         Analyze the following resume against the provided Job Description (JD) for the role of "${jobRole}".
@@ -43,7 +38,7 @@ export async function analyzeResumeWithJD(formData: FormData) {
         Resume Text:
         ${resumeText}
 
-        IMPORTANT: Respond with a VALID JSON object ONLY. Do not include any markdown formatting, backticks, or explanations outside the JSON.
+        IMPORTANT: Respond ONLY with a valid JSON object in this exact format. Do not include any text before or after the JSON. Do not use markdown code blocks. Ensure all strings are properly escaped and no trailing commas.
         
         Structure:
         {
@@ -58,9 +53,7 @@ export async function analyzeResumeWithJD(formData: FormData) {
         }
         `
 
-        const result = await model.generateContent(prompt)
-        const response = await result.response
-        const text = response.text()
+        const text = await generateContentWithRetry(prompt)
 
         // JSON extraction and sanitization
         const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -72,10 +65,30 @@ export async function analyzeResumeWithJD(formData: FormData) {
         });
 
         try {
-            return JSON.parse(jsonStr)
+            const result = JSON.parse(jsonStr)
+            // Save to database
+            const supabase = await createClient()
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user) {
+                await supabase.from('resume_analyses').insert({
+                    user_id: user.id,
+                    overall_score: result.matchScore,
+                    section_scores: {}, // JD match doesn't have section scores
+                    feedback: result.feedback,
+                    source: 'jd_match',
+                    created_at: new Date().toISOString()
+                })
+            }
+            return result
         } catch (e) {
+            console.log('Initial JSON parse failed, raw response:', jsonStr)
             const fixedJson = jsonStr.replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t");
-            return JSON.parse(fixedJson);
+            try {
+                return JSON.parse(fixedJson);
+            } catch (e2) {
+                console.error('Fixed JSON parse also failed:', fixedJson)
+                return { error: 'AI returned invalid JSON. Please try again.' }
+            }
         }
 
     } catch (error: any) {

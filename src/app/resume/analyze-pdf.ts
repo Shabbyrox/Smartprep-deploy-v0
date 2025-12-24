@@ -1,6 +1,6 @@
 'use server'
 
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { generateContentWithRetry } from '../../utils/gemini'
 // @ts-ignore
 import PDFParser from 'pdf2json'
 
@@ -9,11 +9,6 @@ export async function analyzePdfResume(formData: FormData) {
 
     if (!file) {
         return { error: 'No file uploaded' }
-    }
-
-    const apiKey = process.env.GEMINI_API_KEY
-    if (!apiKey) {
-        return { error: 'API key not configured' }
     }
 
     try {
@@ -31,14 +26,10 @@ export async function analyzePdfResume(formData: FormData) {
             pdfParser.parseBuffer(buffer)
         })
 
-        const genAI = new GoogleGenerativeAI(apiKey)
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
-
         const prompt = `
         Analyze the following resume text and provide constructive feedback with scores.
         
-        IMPORTANT: Respond with a VALID JSON object ONLY. Do not include any markdown formatting, backticks, or explanations outside the JSON.
-        Ensure all strings are properly escaped. Do NOT use unescaped control characters (like newlines) inside JSON strings.
+        IMPORTANT: Respond ONLY with a valid JSON object in this exact format. Do not include any text before or after the JSON. Do not use markdown code blocks. Ensure all strings are properly escaped and no trailing commas.
         
         Structure:
         {
@@ -59,9 +50,7 @@ export async function analyzePdfResume(formData: FormData) {
         ${resumeText}
         `
 
-        const result = await model.generateContent(prompt)
-        const response = await result.response
-        const text = response.text()
+        const text = await generateContentWithRetry(prompt)
 
         // Robust JSON extraction and sanitization
         const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -85,10 +74,16 @@ export async function analyzePdfResume(formData: FormData) {
         try {
             return JSON.parse(jsonStr)
         } catch (e) {
+            console.log('Initial JSON parse failed, raw response:', jsonStr)
             // Fallback: Try to escape newlines inside the string
             // This is risky but might save a bad response
             const fixedJson = jsonStr.replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t");
-            return JSON.parse(fixedJson);
+            try {
+                return JSON.parse(fixedJson);
+            } catch (e2) {
+                console.error('Fixed JSON parse also failed:', fixedJson)
+                return { error: 'AI returned invalid JSON. Please try again.' }
+            }
         }
 
     } catch (error: any) {

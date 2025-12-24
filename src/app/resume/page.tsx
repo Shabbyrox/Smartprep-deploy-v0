@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useReactToPrint } from 'react-to-print'
 import { ResumeData, initialResumeData } from '@/types/resume'
 import ResumeForm from '@/components/ResumeForm'
@@ -14,6 +14,13 @@ export default function ResumeBuilder() {
     const [analyzing, setAnalyzing] = useState(false)
     const [analysisResult, setAnalysisResult] = useState<any>(null)
     const componentRef = useRef<HTMLDivElement>(null)
+    const analysisRef = useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        if (analysisResult && analysisRef.current) {
+            analysisRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+    }, [analysisResult])
 
     const handlePrint = useReactToPrint({
         contentRef: componentRef,
@@ -71,7 +78,7 @@ export default function ResumeBuilder() {
 
                         {/* AI Feedback Area */}
                         {analysisResult && (
-                            <div className="mt-8 bg-white p-6 rounded-lg shadow space-y-6">
+                            <div ref={analysisRef} className="mt-8 bg-white p-6 rounded-lg shadow space-y-6">
                                 {/* Overall Score */}
                                 <div className="text-center border-b pb-6">
                                     <h3 className="text-lg font-bold text-gray-900 mb-2">Overall Score</h3>

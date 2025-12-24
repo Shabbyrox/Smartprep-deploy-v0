@@ -1,17 +1,8 @@
 'use server'
 
-import { GoogleGenerativeAI } from '@google/generative-ai'
+import { generateContentWithRetry } from '../../utils/gemini'
 
 export async function gradeCode(question: string, userCode: string) {
-  const apiKey = process.env.GEMINI_API_KEY
-
-  if (!apiKey) {
-    return { error: 'API key not configured' }
-  }
-
-  const genAI = new GoogleGenerativeAI(apiKey)
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' })
-
   const prompt = `
     You are a strict code grader.
     
@@ -25,7 +16,7 @@ export async function gradeCode(question: string, userCode: string) {
     Evaluate if the user's code correctly solves the problem.
     Ignore minor formatting issues, but ensure logic and syntax are correct.
     
-    Respond with a JSON object ONLY:
+    Respond ONLY with a valid JSON object in this exact format. Do not include any text before or after the JSON. Do not use markdown code blocks. Ensure all strings are properly escaped and no trailing commas.
     {
       "correct": boolean,
       "feedback": "Short explanation of why it is correct or incorrect"
@@ -33,20 +24,23 @@ export async function gradeCode(question: string, userCode: string) {
   `
 
   try {
-    const result = await model.generateContent(prompt)
-    const response = await result.response
-    const text = response.text()
+    const text = await generateContentWithRetry(prompt)
 
     // Clean up markdown code blocks if present
     const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim()
 
-    return JSON.parse(jsonStr)
+    try {
+      return JSON.parse(jsonStr)
+    } catch (e) {
+      console.log('JSON parse failed in grade.ts, raw response:', jsonStr)
+      throw new SyntaxError('Invalid JSON')
+    }
   } catch (error: any) {
     console.error('Error grading code:', error)
 
     // Check for specific error types
     if (error.message?.includes('API key')) {
-      return { error: 'Gemini API key is invalid or missing.' }
+      return { error: 'API key is invalid or missing.' }
     }
 
     if (error instanceof SyntaxError) {
