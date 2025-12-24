@@ -13,6 +13,9 @@ const groq = new OpenAI({
 })
 
 export async function generateContentWithRetry(prompt: string, maxRetries = 3): Promise<string> {
+  console.log("Debug - API Key exists:", !!apiKey); // Should print "true"
+console.log("Debug - API Key length:", apiKey?.length); // Should be around 50-60 chars
+console.log("Debug - Model used:", 'openai/gpt-oss-120b');
   let attempt = 0
   while (attempt < maxRetries) {
     try {
