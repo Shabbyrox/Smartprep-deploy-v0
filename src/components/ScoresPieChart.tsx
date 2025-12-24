@@ -51,7 +51,7 @@ const ScoresPieChart = ({ quizScore, resumeScore, interviewScore }: Props) => {
                                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                             ))}
                         </Pie>
-                        <Tooltip formatter={(value: number) => `${value}%`} />
+                        <Tooltip formatter={(value: any) => `${value}%`} />
                         <Legend verticalAlign="bottom" height={36}/>
                     </PieChart>
                 </ResponsiveContainer>
