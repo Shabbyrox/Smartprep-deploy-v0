@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import { signOut } from '@/app/actions'
 import { Menu, X } from 'lucide-react'
 import { useState } from 'react'
+import { Label } from 'recharts'
 
 export default function Navbar() {
     const pathname = usePathname()
@@ -21,6 +22,7 @@ export default function Navbar() {
         { href: '/interview', label: 'Interview' },
         { href: '/dashboard', label: 'Dashboard' },
         { href: '/profile', label: 'Profile' },
+        { href: '/paymentGateway',label:'Payment'},
     ]
 
     return (
@@ -97,3 +99,4 @@ export default function Navbar() {
         </nav>
     )
 }
+
