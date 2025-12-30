@@ -11,27 +11,20 @@ export default async function ProfilePage() {
         redirect('/login')
     }
 
-    // Fetch all new columns
     const { data: profile } = await supabase
         .from('profiles')
-        .select(`
-            full_name, 
-            username, 
-            website, 
-            avatar_url,
-            phone,
-            location,
-            target_role,
-            preferred_industry,
-            skills
-        `)
+        .select('*') // Fetches all columns safely
         .eq('id', user.id)
         .single()
 
     return (
-        <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-            <div className="max-w-3xl mx-auto">
-                <h1 className="text-3xl font-bold text-gray-900 mb-8">Your Profile</h1>
+        <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-4xl mx-auto space-y-6">
+                <div className="text-left">
+                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Profile Settings</h1>
+                    <p className="text-slate-500 mt-1">Manage your personal information and career preferences.</p>
+                </div>
+                
                 <ProfileForm user={user} profile={profile} />
             </div>
         </div>

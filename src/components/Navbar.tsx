@@ -11,6 +11,10 @@ export default function Navbar() {
     const pathname = usePathname()
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
+    if (pathname === '/' || pathname === '/login' || pathname === '/auth/callback') {
+        return null
+    }
+
     const isActive = (path: string) => {
         return pathname === path ? 'bg-gray-900 text-white' : 'text-gray-300 hover:bg-gray-700 hover:text-white'
     }

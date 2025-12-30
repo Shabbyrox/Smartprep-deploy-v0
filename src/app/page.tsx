@@ -5,8 +5,153 @@ import { motion } from 'framer-motion'
 import { FileText, Target, Award, Brain, MessageSquare, ArrowRight, CheckCircle2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 
+// --- 1. Reusable Components (Button & Card) ---
+const Button = ({ children, className, variant = 'primary', ...props }: any) => {
+  const baseStyle = "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-11 px-8"
+  const variants = {
+    primary: "bg-indigo-600 text-white hover:bg-indigo-700 shadow-md",
+    secondary: "bg-white text-indigo-600 hover:bg-gray-100 shadow-md",
+    ghost: "hover:bg-slate-100 text-slate-900"
+  }
+  return (
+    <button className={`${baseStyle} ${variants[variant as keyof typeof variants]} ${className}`} {...props}>
+      {children}
+    </button>
+  )
+}
+
+const Card = ({ children, className }: any) => (
+  <div className={`rounded-xl border bg-white text-slate-950 shadow-sm ${className}`}>
+    {children}
+  </div>
+)
+
+// --- 2. Header Component (Adapted for Next.js) ---
+function Header() {
+  const pathname = usePathname(); // Replaces useLocation
+  const router = useRouter();     // Replaces useNavigate
+  
+  const scrollToSection = (sectionId: string) => {
+    if (pathname !== '/') {
+      router.push('/');
+      setTimeout(() => {
+        const element = document.getElementById(sectionId);
+        element?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    } else {
+      const element = document.getElementById(sectionId);
+      element?.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  return (
+    <motion.header 
+      initial={{ y: -20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      className="sticky top-0 z-50 w-full border-b border-slate-200/40 bg-white/80 backdrop-blur-md"
+    >
+      <div className="container mx-auto flex h-16 items-center px-8">
+        <Link href="/" className="flex items-center space-x-2">
+          <span className="text-2xl tracking-tight text-slate-900" style={{ fontWeight: 600, letterSpacing: '-0.02em' }}>Intraa</span>
+        </Link>
+        
+        <nav className="ml-auto flex items-center space-x-8">
+          <button
+            onClick={() => scrollToSection('features')}
+            className="text-sm transition-colors hover:text-indigo-600 text-slate-600 font-medium"
+          >
+            Features
+          </button>
+          <button
+            onClick={() => scrollToSection('how-it-works')}
+            className="text-sm transition-colors hover:text-indigo-600 text-slate-600 font-medium"
+          >
+            How It Works
+          </button>
+          {/* <Link href="/dashboard" className="text-sm transition-colors hover:text-indigo-600 text-slate-600 font-medium">
+            Dashboard
+          </Link> */}
+          <Link href="/login">
+            <Button variant="ghost" className="text-sm h-9 px-4">
+              Log in
+            </Button>
+          </Link>
+          <Link href="/login">
+            <Button className="h-9 px-4 text-sm bg-indigo-600 text-white hover:bg-indigo-700">
+              Start Free
+            </Button>
+          </Link>
+        </nav>
+      </div>
+    </motion.header>
+  );
+}
+
+// --- 3. Footer Component (Adapted for Next.js) ---
+function Footer() {
+  return (
+    <footer className="border-t border-slate-200 bg-slate-50">
+      <div className="container mx-auto px-8 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <span className="text-xl tracking-tight text-slate-900" style={{ fontWeight: 600 }}>Intraa</span>
+            </div>
+            <p className="text-sm text-slate-500">
+              Prepare with purpose.
+            </p>
+          </div>
+          
+          <div className="space-y-4">
+            <h4 className="text-sm font-semibold text-slate-900">Product</h4>
+            <div className="flex flex-col space-y-2">
+              <Link href="/dashboard" className="text-sm text-slate-500 hover:text-indigo-600 transition-colors">
+                Features
+              </Link>
+              <Link href="/" className="text-sm text-slate-500 hover:text-indigo-600 transition-colors">
+                Pricing
+              </Link>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <h4 className="text-sm font-semibold text-slate-900">Company</h4>
+            <div className="flex flex-col space-y-2">
+              <Link href="/" className="text-sm text-slate-500 hover:text-indigo-600 transition-colors">
+                About
+              </Link>
+              <Link href="/" className="text-sm text-slate-500 hover:text-indigo-600 transition-colors">
+                Blog
+              </Link>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <h4 className="text-sm font-semibold text-slate-900">Legal</h4>
+            <div className="flex flex-col space-y-2">
+              <Link href="/" className="text-sm text-slate-500 hover:text-indigo-600 transition-colors">
+                Privacy
+              </Link>
+              <Link href="/" className="text-sm text-slate-500 hover:text-indigo-600 transition-colors">
+                Terms
+              </Link>
+            </div>
+          </div>
+        </div>
+        
+        <div className="mt-12 pt-8 border-t border-slate-200">
+          <p className="text-sm text-slate-500 text-center">
+            © 2024 Intraa. All rights reserved.
+          </p>
+        </div>
+      </div>
+    </footer>
+  );
+}
+
+// --- 4. Main Page Component ---
 export default function LandingPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(true)
@@ -25,34 +170,17 @@ export default function LandingPage() {
     checkUser()
   }, [router])
 
-  const Button = ({ children, className, variant = 'primary', ...props }: any) => {
-    const baseStyle = "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 h-11 px-8"
-    const variants = {
-      primary: "bg-indigo-600 text-white hover:bg-indigo-700 shadow-md",
-      secondary: "bg-white text-indigo-600 hover:bg-gray-100 shadow-md",
-      ghost: "hover:bg-slate-100 text-slate-900"
-    }
-    return (
-      <button className={`${baseStyle} ${variants[variant as keyof typeof variants]} ${className}`} {...props}>
-        {children}
-      </button>
-    )
-  }
-
-  const Card = ({ children, className }: any) => (
-    <div className={`rounded-xl border bg-white text-slate-950 shadow-sm ${className}`}>
-      {children}
-    </div>
-  )
-
   if (isLoading) return null 
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
+      
+      {/* ADDED HEADER HERE */}
+      <Header />
+
       {/* Hero Section */}
       <section className="relative px-8 py-24 md:py-32 overflow-hidden">
-        {/* 👇 FIX 1: Changed 'bg-linear-to-br' back to 'bg-gradient-to-br' */}
-        <div className="absolute inset-0 bg-linear-to-br from-blue-50/50 via-indigo-50/30 to-violet-50/50 -z-10" />
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50/50 via-indigo-50/30 to-violet-50/50 -z-10" />
         
         <div className="container mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <motion.div
@@ -87,7 +215,6 @@ export default function LandingPage() {
             className="relative"
           >
             <div className="grid grid-cols-1 gap-4 max-w-md mx-auto lg:ml-auto">
-              {/* ... (Cards content remains the same) ... */}
                <motion.div
                 initial={{ y: 20 }}
                 animate={{ y: 0 }}
@@ -242,11 +369,10 @@ export default function LandingPage() {
       </section>
 
       {/* Final CTA */}
-      <section className="px-8 py-24 relative overflow-hidden">
-        {/* 👇 FIX 2: Changed 'bg-linear-to-br' back to 'bg-gradient-to-br' */}
-        <div className="absolute inset-0 bg-linear-to-br from-[#4f46e5] via-[#9333ea] to-[#3730a3] -z-10" />
+      <section className="px-8 py-24 relative overflow-hidden bg-indigo-600">
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-900 opacity-90 -z-10" />
         
-        <div className="container mx-auto text-center text-white">
+        <div className="container mx-auto text-center text-white relative z-10">
           <h2 className="text-4xl md:text-5xl tracking-tight mb-6 font-bold">
             Your career deserves more than guesswork.
           </h2>
@@ -257,6 +383,9 @@ export default function LandingPage() {
           </Link>
         </div>
       </section>
+
+      {/* ADDED FOOTER HERE */}
+      <Footer />
     </div>
   )
 }
