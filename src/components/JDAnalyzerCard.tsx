@@ -1,9 +1,10 @@
 'use client'
 
 import { useState } from 'react'
-import { Upload, Loader2, FileText, Briefcase, CheckCircle, AlertCircle } from 'lucide-react'
+import { Upload, Loader2, FileText, Briefcase, CheckCircle, AlertCircle, ArrowLeft } from 'lucide-react'
 import { analyzeResumeWithJD } from '@/app/resume/analyze-jd'
 import ReactMarkdown from 'react-markdown'
+import Link from 'next/link'
 
 export default function JDAnalyzerCard() {
     const [analyzing, setAnalyzing] = useState(false)
@@ -46,8 +47,14 @@ export default function JDAnalyzerCard() {
     }
 
     return (
-        <div className="bg-white overflow-hidden shadow rounded-lg">
+        <div className="bg-white overflow-hidden shadow rounded-lg border border-slate-200">
             <div className="p-6">
+                {/* 👇 NEW: Back Button */}
+                <Link href="/resume" className="inline-flex items-center text-sm text-slate-500 hover:text-indigo-600 transition-colors mb-6 group">
+                    <ArrowLeft className="h-4 w-4 mr-2 group-hover:-translate-x-1 transition-transform" />
+                    Back to Resume Tools
+                </Link>
+
                 <div className="flex items-center mb-6">
                     <div className="flex-shrink-0 bg-blue-500 rounded-md p-3">
                         <Briefcase className="h-6 w-6 text-white" />
@@ -69,7 +76,7 @@ export default function JDAnalyzerCard() {
                             <input
                                 type="text"
                                 id="job-role"
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                className="mt-1 block w-full text-gray-900 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
                                 placeholder="e.g. Senior Frontend Engineer"
                                 value={jobRole}
                                 onChange={(e) => setJobRole(e.target.value)}
@@ -77,13 +84,13 @@ export default function JDAnalyzerCard() {
                         </div>
 
                         <div>
-                            <label htmlFor="job-description" className="block text-sm font-medium text-gray-700">
+                            <label htmlFor="job-description" className=" block text-sm font-medium text-gray-700">
                                 Job Description (JD)
                             </label>
                             <textarea
                                 id="job-description"
                                 rows={6}
-                                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
+                                className="mt-1 block w-full rounded-md text-gray-900 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
                                 placeholder="Paste the full job description here..."
                                 value={jobDescription}
                                 onChange={(e) => setJobDescription(e.target.value)}
@@ -135,7 +142,7 @@ export default function JDAnalyzerCard() {
                             <h4 className="text-xl font-bold text-gray-900">Match Analysis</h4>
                             <button
                                 onClick={() => setResult(null)}
-                                className="text-sm text-indigo-600 hover:text-indigo-500"
+                                className="text-sm text-indigo-600 hover:text-indigo-500 font-medium"
                             >
                                 Analyze Another
                             </button>

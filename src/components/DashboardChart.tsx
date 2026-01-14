@@ -1,14 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer 
+import {  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
 } from 'recharts'
 import { TrendingUp } from 'lucide-react'
 

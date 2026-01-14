@@ -1,8 +1,27 @@
 'use client'
 
 import Link from 'next/link'
+import { usePathname, useRouter } from 'next/navigation'
 
 export default function LandingFooter() {
+  const pathname = usePathname();
+    const router = useRouter();
+    
+    const scrollToSection = (sectionId: string) => {
+      if (pathname !== '/') {
+        // If we are on Login page, go to Home first
+        router.push('/');
+        setTimeout(() => {
+          const element = document.getElementById(sectionId);
+          element?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      } else {
+        // If we are already on Home
+        const element = document.getElementById(sectionId);
+        element?.scrollIntoView({ behavior: 'smooth' });
+      }
+    };
+
   return (
     <footer className="border-t border-slate-200 bg-slate-50">
       <div className="container mx-auto px-8 py-12">
@@ -19,9 +38,12 @@ export default function LandingFooter() {
           <div className="space-y-4">
             <h4 className="text-sm font-semibold text-slate-900">Product</h4>
             <div className="flex flex-col space-y-2">
-              <Link href="/dashboard" className="text-sm text-slate-500 hover:text-indigo-600 transition-colors">
+              <button
+                onClick={() => scrollToSection('features')}
+                className="text-sm transition-colors hover:text-indigo-600 text-slate-600 font-medium hidden md:block"
+              >
                 Features
-              </Link>
+              </button>
               <Link href="/" className="text-sm text-slate-500 hover:text-indigo-600 transition-colors">
                 Pricing
               </Link>
@@ -55,7 +77,7 @@ export default function LandingFooter() {
         
         <div className="mt-12 pt-8 border-t border-slate-200">
           <p className="text-sm text-slate-500 text-center">
-            © 2024 Intraa. All rights reserved.
+            © 2025 Intraa. All rights reserved.
           </p>
         </div>
       </div>

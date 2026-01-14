@@ -107,7 +107,7 @@ function Footer() {
           <div className="space-y-4">
             <h4 className="text-sm font-semibold text-slate-900">Product</h4>
             <div className="flex flex-col space-y-2">
-              <Link href="/dashboard" className="text-sm text-slate-500 hover:text-indigo-600 transition-colors">
+              <Link href="/" className="text-sm text-slate-500 hover:text-indigo-600 transition-colors">
                 Features
               </Link>
               <Link href="/" className="text-sm text-slate-500 hover:text-indigo-600 transition-colors">
@@ -143,7 +143,7 @@ function Footer() {
         
         <div className="mt-12 pt-8 border-t border-slate-200">
           <p className="text-sm text-slate-500 text-center">
-            © 2024 Intraa. All rights reserved.
+            © 2025 Intraa. All rights reserved.
           </p>
         </div>
       </div>

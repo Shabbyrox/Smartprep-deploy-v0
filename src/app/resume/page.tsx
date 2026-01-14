@@ -1,129 +1,89 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { useReactToPrint } from 'react-to-print'
-import { ResumeData, initialResumeData } from '@/types/resume'
-import ResumeForm from '@/components/ResumeForm'
-import { ResumePreview } from '@/components/ResumePreview'
-import { Download, Save } from 'lucide-react'
-import { analyzeResume } from './analyze'
-import ReactMarkdown from 'react-markdown'
+import Link from 'next/link'
+import { FileText, Search, Briefcase, ArrowRight } from 'lucide-react'
+import { motion } from 'framer-motion'
 
-export default function ResumeBuilder() {
-    const [data, setData] = useState<ResumeData>(initialResumeData)
-    const [analyzing, setAnalyzing] = useState(false)
-    const [analysisResult, setAnalysisResult] = useState<any>(null)
-    const componentRef = useRef<HTMLDivElement>(null)
-    const analysisRef = useRef<HTMLDivElement>(null)
-
-    useEffect(() => {
-        if (analysisResult && analysisRef.current) {
-            analysisRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
-        }
-    }, [analysisResult])
-
-    const handlePrint = useReactToPrint({
-        contentRef: componentRef,
-        documentTitle: `${data.personalInfo.fullName}_Resume`,
-    })
-
-    const handleAnalyze = async () => {
-        setAnalyzing(true)
-        setAnalysisResult(null)
-        const result = await analyzeResume(data)
-        if (result.error) {
-            alert(result.error)
-        } else {
-            setAnalysisResult(result)
-        }
-        setAnalyzing(false)
+export default function ResumeHub() {
+  const tools = [
+    {
+      title: 'AI Resume Builder',
+      description: 'Create a professional, ATS-friendly resume from scratch using our step-by-step AI builder.',
+      icon: <FileText className="h-8 w-8 text-white" />,
+      color: 'bg-blue-600',
+      href: '/resume/builder', 
+      badge: 'Most Popular'
+    },
+    {
+      title: 'Resume Analyzer',
+      description: 'Upload your existing PDF resume. Get an instant score (0-100) and actionable feedback.',
+      icon: <Search className="h-8 w-8 text-white" />,
+      color: 'bg-purple-600',
+      href: '/resume/upload',
+      badge: 'AI Powered'
+    },
+    {
+      title: 'Job Matcher',
+      description: 'Paste a Job Description (JD) and your resume to see how well you match the role.',
+      icon: <Briefcase className="h-8 w-8 text-white" />,
+      color: 'bg-emerald-600',
+      href: '/resume/jd-analysis',
+      badge: 'New'
     }
+  ]
 
-    const getScoreColor = (score: number) => {
-        if (score >= 80) return 'text-green-800 border-green-500 bg-green-100'
-        if (score >= 60) return 'text-yellow-800 border-yellow-500 bg-yellow-100'
-        return 'text-red-800 border-red-500 bg-red-100'
-    }
-
-    return (
-        <div className="min-h-screen bg-gray-100">
-            {/* Top Bar */}
-            <header className="bg-white shadow sticky top-0 z-10">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-                    <h1 className="text-2xl font-bold text-gray-900">Resume Builder</h1>
-                    <div className="flex gap-4">
-                        <button
-                            onClick={handleAnalyze}
-                            disabled={analyzing}
-                            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-                        >
-                            {analyzing ? 'Analyzing...' : 'Analyze with AI'}
-                        </button>
-                        <button
-                            onClick={() => handlePrint()}
-                            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                        >
-                            <Download className="h-4 w-4 mr-2" />
-                            Download PDF
-                        </button>
-                    </div>
-                </div>
-            </header>
-
-            <main className="max-w-[1920px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="flex flex-col lg:flex-row gap-8">
-                    {/* Left Side: Form */}
-                    <div className="w-full lg:w-1/2 xl:w-2/5 h-[calc(100vh-100px)] overflow-y-auto pr-2">
-                        <ResumeForm data={data} onChange={setData} />
-
-                        {/* AI Feedback Area */}
-                        {analysisResult && (
-                            <div ref={analysisRef} className="mt-8 bg-white p-6 rounded-lg shadow space-y-6">
-                                {/* Overall Score */}
-                                <div className="text-center border-b pb-6">
-                                    <h3 className="text-lg font-bold text-gray-900 mb-2">Overall Score</h3>
-                                    <div className={`inline-flex items-center justify-center w-24 h-24 rounded-full border-4 text-4xl font-extrabold ${getScoreColor(analysisResult.overallScore)}`}>
-                                        {analysisResult.overallScore}
-                                    </div>
-                                </div>
-
-                                {/* Section Scores */}
-                                <div>
-                                    <h4 className="font-semibold text-gray-900 mb-3">Section Breakdown</h4>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        {Object.entries(analysisResult.sectionScores || {}).map(([key, score]: [string, any]) => (
-                                            <div key={key} className="bg-gray-50 p-3 rounded-lg">
-                                                <div className="flex justify-between items-center mb-1">
-                                                    <span className="text-sm font-medium text-gray-700 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
-                                                    <span className={`text-xs font-extrabold px-2 py-1 rounded border ${getScoreColor(score)}`}>{score}/100</span>
-                                                </div>
-                                                <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                                    <div className={`h-1.5 rounded-full ${score >= 80 ? 'bg-green-500' : score >= 60 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${score}%` }}></div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Detailed Feedback */}
-                                <div>
-                                    <h4 className="font-semibold text-gray-900 mb-3">Detailed Feedback</h4>
-                                    <div className="prose prose-sm max-w-none text-gray-700 bg-gray-50 p-4 rounded-lg">
-                                        <ReactMarkdown>{analysisResult.feedback}</ReactMarkdown>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Right Side: Preview */}
-                    <div className="w-full lg:w-1/2 xl:w-3/5 bg-gray-200 p-8 rounded-lg flex justify-center items-start overflow-y-auto h-[calc(100vh-100px)]">
-                        <div className="transform scale-90 origin-top">
-                            <ResumePreview ref={componentRef} data={data} />
-                        </div>
-                    </div>
-                </div>
-            </main>
+  return (
+    <div className="min-h-screen bg-slate-50 py-16 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight sm:text-5xl">
+            Resume Intelligence Suite
+          </h1>
+          <p className="mt-4 text-xl text-slate-500 max-w-2xl mx-auto">
+            Everything you need to land your dream job. Build, analyze, and optimize your resume in minutes.
+          </p>
         </div>
-    )
+
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
+          {tools.map((tool, index) => (
+            <Link key={tool.title} href={tool.href} className="group">
+              <motion.div
+                whileHover={{ y: -5 }}
+                className="relative flex flex-col h-full bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-xl transition-all duration-300"
+              >
+                {/* Header with Icon */}
+                <div className={`${tool.color} p-6 flex justify-between items-start`}>
+                  <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
+                    {tool.icon}
+                  </div>
+                  {tool.badge && (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-white/20 text-white backdrop-blur-md">
+                      {tool.badge}
+                    </span>
+                  )}
+                </div>
+
+                {/* Content */}
+                <div className="p-6 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                      {tool.title}
+                    </h3>
+                    <p className="mt-3 text-slate-500 text-sm leading-relaxed">
+                      {tool.description}
+                    </p>
+                  </div>
+                  
+                  <div className="mt-8 flex items-center text-sm font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                    Start Now 
+                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </div>
+                </div>
+              </motion.div>
+            </Link>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
 }

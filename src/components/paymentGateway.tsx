@@ -65,7 +65,7 @@ export default function PaymentGateway() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100">
       <div className="rounded-lg bg-white p-8 shadow-lg text-center">
-        <h1 className="mb-4 text-2xl font-bold">Upgrade to Premium</h1>
+        <h1 className="mb-4 text-gray-700 text-2xl font-bold">Upgrade to Premium</h1>
         <p className="mb-6 text-gray-600">Get access to all premium features</p>
         <button
           onClick={handlePayment}

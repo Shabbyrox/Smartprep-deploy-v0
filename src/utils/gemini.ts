@@ -1,37 +1,45 @@
 'use server'
 
-import OpenAI from 'openai'
+import { GoogleGenerativeAI } from '@google/generative-ai'
 
-const apiKey = process.env.GROQ_API_KEY
+const apiKey = process.env.GEMINI_API_KEY
 if (!apiKey) {
-  throw new Error('GROQ_API_KEY not configured')
+  throw new Error('GEMINI_API_KEY not configured')
 }
 
-const groq = new OpenAI({
-  apiKey,
-  baseURL: 'https://api.groq.com/openai/v1',
-})
+// Initialize Gemini Client
+const genAI = new GoogleGenerativeAI(apiKey)
 
 export async function generateContentWithRetry(prompt: string, maxRetries = 3): Promise<string> {
-  console.log("Debug - API Key exists:", !!apiKey); // Should print "true"
-console.log("Debug - API Key length:", apiKey?.length); // Should be around 50-60 chars
-console.log("Debug - Model used:", 'openai/gpt-oss-120b');
+  console.log("Debug - API Key exists:", !!apiKey);
+
   let attempt = 0
+  
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' })
+
   while (attempt < maxRetries) {
     try {
-      const completion = await groq.chat.completions.create({
-        model: 'openai/gpt-oss-120b', // Current Groq model
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 1024,
-      })
-      return completion.choices[0]?.message?.content?.trim() || ''
+      // Gemini's generateContent is the equivalent of chat.completions.create
+      const result = await model.generateContent(prompt)
+      const response = await result.response
+      const text = response.text()
+      
+      return text?.trim() || ''
+      
     } catch (error: any) {
-      if (error.status === 429 || error.message?.includes('rate limit')) {
-        const delay = Math.pow(2, attempt) * 1000 // Exponential backoff: 1s, 2s, 4s
-        console.log(`Rate limited, retrying in ${delay}ms...`)
+      // Gemini often throws a 429 or 503 for rate limits/overload
+      // We check for these status codes or specific error messages
+      const isRateLimit = error.status === 429 || 
+                          error.message?.includes('429') || 
+                          error.message?.includes('Resource has been exhausted')
+
+      if (isRateLimit || error.status === 503) {
+        const delay = Math.pow(2, attempt) * 1000
+        console.log(`Gemini Rate limited/Busy, retrying in ${delay}ms...`)
         await new Promise(resolve => setTimeout(resolve, delay))
         attempt++
       } else {
+        console.error("Gemini API Error:", error)
         throw error
       }
     }

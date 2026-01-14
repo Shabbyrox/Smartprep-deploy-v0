@@ -1,3 +1,4 @@
+// src/app/dashboard/DashboardSections.tsx
 import { createClient } from '@/utils/supabase/server'
 import { Trophy, Star, Activity, FileText, BrainCircuit, Clock } from 'lucide-react'
 import DashboardChart from '@/components/DashboardChart'
@@ -172,7 +173,7 @@ function StatCard({ icon, label, value }: { icon: React.ReactNode, label: string
         <div className="bg-white overflow-hidden shadow rounded-lg">
             <div className="p-5">
                 <div className="flex items-center">
-                    <div className="flex-shrink-0">{icon}</div>
+                    <div className="shrink-0">{icon}</div>
                     <div className="ml-5 w-0 flex-1">
                         <dl>
                             <dt className="text-sm font-medium text-gray-500 truncate">{label}</dt>
